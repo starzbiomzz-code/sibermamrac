@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper:     #F5F0E8;
+  --color-card:      #FFFDF9;
+  --color-ink:       #1C1C1C;
+  --color-muted:     #6B6B6B;
+  --color-line:      #D4C5B0;
+  --color-coffee:    #5C4033;
+  --color-coffeeDk:  #3E2B22;
+  --color-brick:     #B85C38;
+  --color-moss:      #6B8E23;
+
+  --shadow-paper:      0 1px 0 #D4C5B0, 0 4px 6px rgba(92,64,51,0.08), 0 12px 24px rgba(92,64,51,0.06);
+  --shadow-paperHover: 0 1px 0 #D4C5B0, 0 8px 12px rgba(92,64,51,0.12), 0 20px 40px rgba(92,64,51,0.10);
+  --shadow-btn:        0 2px 0 #3E2B22;
+
+  --radius-paper: 6px;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: Arial, Helvetica, sans-serif;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(212,197,176,0.15) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(212,197,176,0.10) 0%, transparent 40%);
+  background-attachment: fixed;
+}
+
+/* komponen kertas */
+.paper-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-paper);
+  box-shadow: var(--shadow-paper);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.paper-card:hover {
+  box-shadow: var(--shadow-paperHover);
+  transform: translateY(-2px);
+}
+.paper-btn {
+  background: var(--color-coffee);
+  color: var(--color-card);
+  border: 1px solid var(--color-coffeeDk);
+  border-radius: var(--radius-paper);
+  box-shadow: var(--shadow-btn);
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: transform 0.1s, box-shadow 0.1s;
+  cursor: pointer;
+}
+.paper-btn:hover { background: var(--color-coffeeDk); }
+.paper-btn:active { transform: translateY(2px); box-shadow: none; }
+
+.paper-input {
+  width: 100%;
+  background: var(--color-card);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-paper);
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--color-ink);
+  outline: none;
+}
+.paper-input:focus { border-color: var(--color-coffee); }
+
+.paper-badge {
+  display: inline-block;
+  background: var(--color-brick);
+  color: var(--color-card);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.paper-credit { font-weight: 700; color: var(--color-moss); }
