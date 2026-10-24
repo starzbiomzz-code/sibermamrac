@@ -6,9 +6,14 @@ import { createClient } from "@/lib/supabase/client";
 type Msg = { role: string; content: string };
 
 function splitWork(text: string) {
-  const m = text.match(/\[BEGIN_WORK\]([\s\S]*?)\[END_WORK\]/);
-  if (!m) return { chat: text.trim(), work: null };
-  return { chat: text.replace(m[0], "").trim(), work: m[1].trim() };
+  const tagged = text.match(/\[BEGIN_WORK\]([\s\S]*?)\[END_WORK\]/);
+  if (tagged) {
+    return { chat: text.replace(tagged[0], "").trim(), work: tagged[1].trim() };
+  }
+  if (/```terminal|\[ANALISIS\]/.test(text)) {
+    return { chat: "", work: text.trim() };
+  }
+  return { chat: text.trim(), work: null };
 }
 
 export default function ChatRoom() {
@@ -154,7 +159,7 @@ export default function ChatRoom() {
   return (
     <main className="min-h-screen p-4 md:p-8 flex flex-col gap-4">
       <div className="flex justify-between items-center flex-wrap gap-2">
-        <h1 className="text-2xl font-bold" style={{ color: "var(--color-coffee)" }}>Kitty 💻</h1>
+        <h1 className="text-2xl font-bold" style={{ color: "var(--color-coffee)" }}>Rusdy 💻</h1>
         <div className="flex gap-2 items-center">
           <div className={`px-3 py-1 rounded-full text-sm font-bold ${expired ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-800'}`}>
             {expired ? '🔴 Offline' : `⏳ ${sisaWaktu}`}
@@ -172,7 +177,7 @@ export default function ChatRoom() {
             <button onClick={sesiBaru} className="text-xs underline" style={{ color: "var(--color-coffee)" }}>+ Sesi Baru</button>
           </div>
           <div className="flex-1 overflow-y-auto flex flex-col gap-2 mb-3" style={{ maxHeight: "55vh" }}>
-            {chat.map((c, i) => (
+            {chat.filter(c => c.content.trim()).map((c, i) => (
               <div key={i} className={`p-2 rounded-lg max-w-[90%] text-sm ${c.role === "user" ? "bg-[#5C4033] text-white self-end" : "bg-[#F5F0E8] self-start border border-[#D4C5B0]"}`}>
                 {renderContent(c.content)}
               </div>
@@ -192,7 +197,7 @@ export default function ChatRoom() {
         </div>
 
         <div className="paper-card p-4 flex flex-col" style={{ background: "#0d0d0d" }}>
-          <p className="text-xs font-bold uppercase tracking-widest mb-2 text-[#00ff41]">💻 Output Kerja</p>
+          <p className="text-xs font-bold uppercase tracking-widest mb-2 text-[#00ff41]">💻 Rusdy Workspace</p>
           <div className="flex-1 overflow-y-auto flex flex-col gap-3" style={{ maxHeight: "60vh" }}>
             {workLog.length === 0 && <p className="text-xs text-gray-500 italic">Belum ada tugas yang dieksekusi 😴</p>}
             {workLog.map((w, i) => (
