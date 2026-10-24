@@ -7,7 +7,7 @@ type Msg = { role: string; content: string };
 
 function splitWork(text: string) {
   const m = text.match(/\[BEGIN_WORK\]([\s\S]*?)\[END_WORK\]/);
-  if (!m) return { chat: text, work: null };
+  if (!m) return { chat: text.trim(), work: null };
   return { chat: text.replace(m[0], "").trim(), work: m[1].trim() };
 }
 
@@ -131,7 +131,7 @@ export default function ChatRoom() {
       await sb.from("chat_messages").insert({ user_id: userId, session_id: currentSessionId, role: "ai", content: fullText });
     } catch {
       setStatus(null);
-      setChat(p => [...p, { role: "ai", content: "Error konek AI." }]);
+      setChat(p => [...p, { role: "ai", content: "Error konek AI 😹" }]);
     }
   }
 
@@ -154,7 +154,7 @@ export default function ChatRoom() {
   return (
     <main className="min-h-screen p-4 md:p-8 flex flex-col gap-4">
       <div className="flex justify-between items-center flex-wrap gap-2">
-        <h1 className="text-2xl font-bold" style={{ color: "var(--color-coffee)" }}>Kitty Workspace</h1>
+        <h1 className="text-2xl font-bold" style={{ color: "var(--color-coffee)" }}>Kitty 💻</h1>
         <div className="flex gap-2 items-center">
           <div className={`px-3 py-1 rounded-full text-sm font-bold ${expired ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-800'}`}>
             {expired ? '🔴 Offline' : `⏳ ${sisaWaktu}`}
@@ -163,12 +163,12 @@ export default function ChatRoom() {
         </div>
       </div>
 
-      {expired && <div className="bg-red-100 border border-red-400 text-red-700 p-3 rounded-lg text-sm"><b>Sesi Berakhir.</b> Perpanjang dulu.</div>}
+      {expired && <div className="bg-red-100 border border-red-400 text-red-700 p-3 rounded-lg text-sm"><b>Sesi Berakhir.</b> Perpanjang dulu 😹</div>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1" style={{ minHeight: "60vh" }}>
         <div className="paper-card p-4 flex flex-col">
           <div className="flex justify-between items-center mb-2">
-            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--color-muted)" }}>Obrolan</p>
+            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--color-muted)" }}>💬 Obrolan</p>
             <button onClick={sesiBaru} className="text-xs underline" style={{ color: "var(--color-coffee)" }}>+ Sesi Baru</button>
           </div>
           <div className="flex-1 overflow-y-auto flex flex-col gap-2 mb-3" style={{ maxHeight: "55vh" }}>
@@ -186,15 +186,15 @@ export default function ChatRoom() {
             <div ref={bottomChatRef} />
           </div>
           <form onSubmit={kirim} className="flex gap-2">
-            <input className="paper-input flex-1" value={msg} onChange={e => setMsg(e.target.value)} placeholder="Ngobrol atau kasih tugas..." disabled={!!status || expired || !userId} />
+            <input className="paper-input flex-1" value={msg} onChange={e => setMsg(e.target.value)} placeholder="Ngobrol atau kasih tugas... 🔥" disabled={!!status || expired || !userId} />
             <button className="paper-btn" type="submit" disabled={!!status || expired || !userId}>Kirim</button>
           </form>
         </div>
 
         <div className="paper-card p-4 flex flex-col" style={{ background: "#0d0d0d" }}>
-          <p className="text-xs font-bold uppercase tracking-widest mb-2 text-[#00ff41]">Output Kerja</p>
+          <p className="text-xs font-bold uppercase tracking-widest mb-2 text-[#00ff41]">💻 Output Kerja</p>
           <div className="flex-1 overflow-y-auto flex flex-col gap-3" style={{ maxHeight: "60vh" }}>
-            {workLog.length === 0 && <p className="text-xs text-gray-500 italic">Belum ada tugas yang dieksekusi.</p>}
+            {workLog.length === 0 && <p className="text-xs text-gray-500 italic">Belum ada tugas yang dieksekusi 😴</p>}
             {workLog.map((w, i) => (
               <div key={i} className="text-xs text-[#00ff41] font-mono border-l-2 border-[#00ff41]/50 pl-3">
                 {renderContent(w.content)}

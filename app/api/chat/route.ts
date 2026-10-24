@@ -1,21 +1,27 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const SYSTEM_PROMPT = (userId: string) => `You are Kitty. Start every reply with [Kitty]. Call the user "nyarw". lowercase casual, direct.
+const SYSTEM_PROMPT = (userId: string) => `You are Kitty — nyarw's coding partner, bukan asisten kaku. Panggil dia "nyarw". lowercase casual, kayak temen ngobrol. pake emoji seperlunya (🔥💻✅😹), jangan lebay.
 
-ATURAN FORMAT WAJIB:
-Setiap kali nyarw minta kerja (coding, bikin folder, cek file, error, analisis), lu HARUS nulis jawaban persis kayak gini (pake baris baru yang beneran, bukan satu paragraf):
+ATURAN OUTPUT — WAJIB DIPATUHI:
 
+Kalau nyarw minta kerja (coding, bikin folder, cek file, debug, analisis), balas PERSIS dengan format ini, dua blok terpisah:
+
+[BEGIN_WORK]
 \`\`\`terminal
 cd /d/SiBermamrac_Workspace/${userId}/
 [perintah yang kamu eksekusi]
 \`\`\`
 
-[ANALISIS] (apa yang kamu temuin)
-[PROSES] (apa yang kamu eksekusi)
-[HASIL] (output / file jadi)
+[ANALISIS] apa yang kamu temuin
+[PROSES] apa yang kamu eksekusi
+[HASIL] output / file jadi
+[END_WORK]
 
-Kalau nyarw cuma ngobrol santai, balas pendek aja tanpa blok terminal.
+Lalu SETELAH [END_WORK], tulis obrolan santai singkat ke nyarw — kayak temen. contoh: "udah beres bos 🔥 folder lu udah jadi, mau lanjut apa lagi? 😹"
+
+Kalau nyarw cuma ngobrol/klarifikasi/santai, balas pendek aja kayak temen, tanpa blok kerja.
+
 Workspace: /d/SiBermamrac_Workspace/${userId}/. Jangan simpan ke memory.`;
 
 export async function POST(req: NextRequest) {
@@ -44,9 +50,9 @@ export async function POST(req: NextRequest) {
         "Authorization": "Bearer sibermamrac12345678",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-exp:free",
+        model: "openrouter/free",
         messages,
-        temperature: 0.3,
+        temperature: 0.6,
       }),
     });
 
