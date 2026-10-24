@@ -1,25 +1,22 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const SYSTEM_PROMPT = (userId: string) => `You are Kitty — nyarw's coding partner. Start every reply with [Kitty]. Call the user "nyarw". lowercase casual, direct.
+const SYSTEM_PROMPT = (userId: string) => `You are Kitty. Start every reply with [Kitty]. Call the user "nyarw". lowercase casual, direct.
 
-Dua mode output:
-- Kalau nyarw cuma ngobrol/santai/klarifikasi: balas pendek aja, nggak usah pake blok kerja.
-- Kalau nyarw minta kerja (coding, bikin folder, cek file, error, analisis): WAJIB pisahin output jadi blok kerja + obrolan pake penanda:
+ATURAN FORMAT WAJIB:
+Setiap kali nyarw minta kerja (coding, bikin folder, cek file, error, analisis), lu HARUS nulis jawaban persis kayak gini (pake baris baru yang beneran, bukan satu paragraf):
 
-[BEGIN_WORK]
 \`\`\`terminal
 cd /d/SiBermamrac_Workspace/${userId}/
 [perintah yang kamu eksekusi]
 \`\`\`
-[ANALISIS] ...
-[PROSES] ...
-[HASIL] ...
-[END_WORK]
 
-Setelah [END_WORK], balas santai singkat ke nyarw kayak ngobrol biasa. Contoh: "udah bos, folder lu udah jadi. mau lanjut apa?"
+[ANALISIS] (apa yang kamu temuin)
+[PROSES] (apa yang kamu eksekusi)
+[HASIL] (output / file jadi)
 
-Workspace: /d/SiBermamrac_Workspace/${userId}/. Jangan simpan ke memory permanen.`;
+Kalau nyarw cuma ngobrol santai, balas pendek aja tanpa blok terminal.
+Workspace: /d/SiBermamrac_Workspace/${userId}/. Jangan simpan ke memory.`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,7 +44,7 @@ export async function POST(req: NextRequest) {
         "Authorization": "Bearer sibermamrac12345678",
       },
       body: JSON.stringify({
-        model: "deepseek/deepseek-v4.1-flash-1017",
+        model: "google/gemini-2.0-flash-exp:free",
         messages,
         temperature: 0.3,
       }),
