@@ -123,7 +123,7 @@ export default function ChatRoom() {
         const lines = part.split("\n");
         const code = lines.slice(1, -1).join("\n");
         return (
-          <pre key={i} className="bg-black text-green-400 p-3 rounded text-xs overflow-x-auto font-mono my-2 border border-gray-700 whitespace-pre-wrap">
+          <pre key={i} className="bg-[#1C1C1C] text-[#F5F0E8] p-3 rounded text-xs overflow-x-auto font-mono my-2 border border-[#3E2B22] whitespace-pre-wrap">
             {code}
           </pre>
         );
@@ -140,7 +140,7 @@ export default function ChatRoom() {
           <p className="text-xs font-bold mb-1" style={{ color: "var(--color-muted)" }}>Riwayat Chat</p>
           {sessions.map((s) => (
             <button key={s.id} onClick={() => setCurrentSessionId(s.id)}
-              className={`text-left p-2 rounded text-sm truncate ${currentSessionId === s.id ? "bg-[#5C4033] text-white" : "bg-gray-100 hover:bg-gray-200 text-black"}`}>
+              className={`text-left p-2 rounded-lg text-sm truncate transition-colors ${currentSessionId === s.id ? "bg-[#5C4033] text-white shadow-md" : "bg-[#F5F0E8] hover:bg-[#E8E0D5] text-[#5C4033]"}`}>
               {s.title || "Percakapan Baru"}
             </button>
           ))}
@@ -151,30 +151,30 @@ export default function ChatRoom() {
         <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
           <h1 className="text-2xl font-bold" style={{ color: "var(--color-coffee)" }}>Ruang Chat AI</h1>
           <div className="flex gap-2 items-center">
-            <div className={`px-3 py-1 rounded text-sm font-bold ${expired ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-800'}`}>
+            <div className={`px-3 py-1 rounded-full text-sm font-bold shadow-sm ${expired ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-800'}`}>
               {expired ? '🔴 AI Dimatikan' : `⏳ Sisa: ${sisaWaktu}`}
             </div>
             <Link href="/dashboard" className="paper-btn text-sm">Perpanjang</Link>
           </div>
         </div>
         
-        {expired && <div className="bg-red-100 border border-red-400 text-red-700 p-3 rounded mb-3 text-sm"><b>Sesi Berakhir.</b> AI dimatikan otomatis. Silakan Perpanjang.</div>}
+        {expired && <div className="bg-red-100 border border-red-400 text-red-700 p-3 rounded-lg mb-3 text-sm shadow-sm"><b>Sesi Berakhir.</b> AI dimatikan otomatis. Silakan Perpanjang.</div>}
 
         <div className="flex-1 paper-card p-4 overflow-y-auto mb-4 flex flex-col gap-3" style={{ minHeight: "300px", maxHeight: "60vh" }}>
           {chat.map((c, i) => (
-            <div key={i} className={`p-3 rounded max-w-[85%] text-sm ${c.role === "user" ? "bg-[#5C4033] text-white self-end" : "bg-[#F5F0E8] self-start border border-gray-300"}`}>
+            <div key={i} className={`p-3 rounded-xl max-w-[85%] text-sm shadow-sm ${c.role === "user" ? "bg-[#5C4033] text-white self-end" : "bg-[#FFFDF9] self-start border border-[#D4C5B0]"}`}>
               {renderContent(c.content)}
             </div>
           ))}
 
           {status && (
-            <div className="p-2 text-xs self-start border-l-2 border-[#6B8E23] bg-[#6B8E23]/10 animate-pulse text-[#5a7a1d] font-semibold">
+            <div className="p-2 text-xs self-start border-l-2 border-[#6B8E23] bg-[#6B8E23]/10 animate-pulse text-[#5a7a1d] font-semibold rounded-r-lg">
               &gt; {status}
             </div>
           )}
 
           {typingText && (
-            <div className="p-3 rounded max-w-[85%] self-start border border-gray-300 bg-[#F5F0E8] text-sm">
+            <div className="p-3 rounded-xl max-w-[85%] self-start border border-[#D4C5B0] bg-[#FFFDF9] text-sm shadow-sm">
               {renderContent(typingText)}
               <span className="animate-pulse">_</span>
             </div>

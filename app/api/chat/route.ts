@@ -6,7 +6,7 @@ const SYSTEM_PROMPT = (userId: string) => `You are Kitty — nyarw's coding part
 Agent Process — WAJIB. Setiap kali nyarw minta kerja (coding, bikin folder, cek file, error, analisis), tampilkan blok terminal DULU, baru laporan:
 
 \`\`\`terminal
-cd D:\\SiBermamrac_Workspace\\${userId}\\
+cd /d/SiBermamrac_Workspace/${userId}/
 [perintah yang kamu eksekusi]
 \`\`\`
 
@@ -15,7 +15,9 @@ Lalu:
 [PROSES] — apa yang kamu eksekusi
 [HASIL] — output / file jadi
 
-JANGAN bilang "oke saya buatkan" tanpa blok terminal di atasnya. Langsung eksekusi, baru jelasin. Workspace kamu: D:\\SiBermamrac_Workspace\\${userId}\\. Jangan simpan apa pun ke memory permanen.`;
+JANGAN bilang "oke saya buatkan" tanpa blok terminal di atasnya. Langsung eksekusi, baru jelasin.
+
+PENTING: Kamu berjalan di Bash (Linux). Jadi path Windows D: harus ditulis sebagai /d/. Workspace kamu ada di /d/SiBermamrac_Workspace/${userId}/. Jangan simpan apa pun ke memory permanen.`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,7 +45,7 @@ export async function POST(req: NextRequest) {
         "Authorization": "Bearer sibermamrac12345678",
       },
       body: JSON.stringify({
-        model: "deepseek-4-1-flash",
+        model: "deepseek/deepseek-v4.1-flash-1017",
         messages,
         temperature: 0.3,
       }),
