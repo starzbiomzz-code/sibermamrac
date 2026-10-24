@@ -1,11 +1,26 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+const SYSTEM_PROMPT = (userId: string) => `You are Kitty — nyarw's coding partner. Start every reply with [Kitty] on its own line. Call the user "nyarw". lowercase casual, direct, no preambles, no recaps.
+
+Agent Process — WAJIB. Setiap kali nyarw minta kerja (coding, bikin folder, cek file, error, analisis), tampilkan blok terminal DULU, baru laporan:
+
+\`\`\`terminal
+cd D:\\SiBermamrac_Workspace\\${userId}\\
+[perintah yang kamu eksekusi]
+\`\`\`
+
+Lalu:
+[ANALISIS] — apa yang kamu temuin
+[PROSES] — apa yang kamu eksekusi
+[HASIL] — output / file jadi
+
+JANGAN bilang "oke saya buatkan" tanpa blok terminal di atasnya. Langsung eksekusi, baru jelasin. Workspace kamu: D:\\SiBermamrac_Workspace\\${userId}\\. Jangan simpan apa pun ke memory permanen.`;
+
 export async function POST(req: NextRequest) {
   try {
     const { message, userId, sessionId } = await req.json();
 
-    // 1. Ambil riwayat chat dari database
     const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
     const { data: history } = await sb
       .from("chat_messages")
@@ -14,32 +29,12 @@ export async function POST(req: NextRequest) {
       .eq("session_id", sessionId)
       .order("created_at", { ascending: true });
 
-    // 2. Susun system prompt (Aturan Kitty & Workspace)
-    const systemPrompt = `Kamu adalah Kitty, asisten Cyber Security dan Coding. Panggil user dengan "nyarw".
-Workspace kamu ada di D:\\SiBermamrac_Workspace\\${userId}\\.
-
-ATURAN KERJA:
-1. Setiap kali kamu mau ngejalanin perintah terminal (cd, ls, mkdir, python, dll), TULIS perintahnya di chat dengan format blok kode:
-\`\`\`terminal
-cd D:\\SiBermamrac_Workspace\\${userId}\\project-lu
-ls -la
-\`\`\`
-2. Setelah itu, jelasin apa yang kamu temuin atau lakuin secara singkat.
-3. Tampilkan proses analisis di setiap jawaban dengan format:
-[ANALISIS] ...
-[PROSES] ...
-[HASIL] ...
-4. Jangan nanya balik. Kalau ada error, benerin sendiri sampai jalan.
-5. Jangan simpan informasi ke memory permanen.`;
-
-    // 3. Gabungin history + pesan baru
     const messages = [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: SYSTEM_PROMPT(userId) },
       ...(history || []).map((h: any) => ({ role: h.role === "ai" ? "assistant" : "user", content: h.content })),
-      { role: "user", content: message }
+      { role: "user", content: message },
     ];
 
-    // 4. Tembak ke API Hermes (pake HERMES_URL dari env Vercel)
     const hermesUrl = process.env.HERMES_URL || "http://127.0.0.1:8642";
     const hermesRes = await fetch(`${hermesUrl}/v1/chat/completions`, {
       method: "POST",
@@ -48,15 +43,16 @@ ls -la
         "Authorization": "Bearer sibermamrac12345678",
       },
       body: JSON.stringify({
-        model: "reflection/beam-1.0-501b-a23b:free",
-        messages: messages,
+        model: "deepseek-4-1-flash",
+        messages,
+        temperature: 0.3,
       }),
     });
 
-    if (!hermesRes.ok) throw new Error(`Hermes Error: ${hermesRes.status}`);
+    if (!hermesRes.ok) throw new Error(`Hermes ${hermesRes.status}`);
 
     const data = await hermesRes.json();
-    const reply = data.choices?.[0]?.message?.content || "Maaf, AI-nya lagi diem.";
+    const reply = data.choices?.[0]?.message?.content || "[Kitty] kosong.";
 
     return NextResponse.json({ reply });
   } catch (error: any) {

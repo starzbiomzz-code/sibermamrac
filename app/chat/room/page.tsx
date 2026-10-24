@@ -6,12 +6,13 @@ import { createClient } from "@/lib/supabase/client";
 export default function ChatRoom() {
   const [msg, setMsg] = useState("");
   const [chat, setChat] = useState<{role: string, content: string}[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
   const [expired, setExpired] = useState(false);
   const [sisaWaktu, setSisaWaktu] = useState("Menghitung...");
   const [userId, setUserId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<any[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [typingText, setTypingText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,35 +30,22 @@ export default function ChatRoom() {
       if (sub && sub.expired_at) {
         checkInterval = setInterval(() => {
           const diff = new Date(sub.expired_at).getTime() - new Date().getTime();
-          if (diff <= 0) {
-            setExpired(true);
-            setSisaWaktu("00:00:00");
-            clearInterval(checkInterval);
-          } else {
+          if (diff <= 0) { setExpired(true); setSisaWaktu("Habis"); clearInterval(checkInterval); }
+          else {
             setExpired(false);
             const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
             const m = Math.floor((diff / 1000 / 60) % 60);
             const s = Math.floor((diff / 1000) % 60);
-            setSisaWaktu(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
+            setSisaWaktu(`${h}j ${m}m ${s}s`);
           }
         }, 1000);
-      } else {
-        setExpired(true);
-        setSisaWaktu("00:00:00");
-      }
+      } else { setExpired(true); setSisaWaktu("Habis"); }
 
-      const { data: sessData } = await sb.from("chat_sessions")
-        .select("*").eq("user_id", user.id).order("created_at", { ascending: false });
-      
-      if (sessData && sessData.length > 0) {
-        setSessions(sessData);
-        setCurrentSessionId(sessData[0].id);
-      } else {
+      const { data: sessData } = await sb.from("chat_sessions").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+      if (sessData && sessData.length > 0) { setSessions(sessData); setCurrentSessionId(sessData[0].id); }
+      else {
         const { data: newSess } = await sb.from("chat_sessions").insert({ user_id: user.id }).select().single();
-        if (newSess) {
-          setSessions([newSess]);
-          setCurrentSessionId(newSess.id);
-        }
+        if (newSess) { setSessions([newSess]); setCurrentSessionId(newSess.id); }
       }
     }
     load();
@@ -68,40 +56,31 @@ export default function ChatRoom() {
     if (!currentSessionId || !userId) return;
     async function loadMsgs() {
       const sb = createClient();
-      const { data } = await sb.from("chat_messages").select("role, content")
-        .eq("user_id", userId).eq("session_id", currentSessionId).order("created_at", { ascending: true });
+      const { data } = await sb.from("chat_messages").select("role, content").eq("user_id", userId).eq("session_id", currentSessionId).order("created_at", { ascending: true });
       if (data) setChat(data);
     }
     loadMsgs();
   }, [currentSessionId, userId]);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chat, typingText, status]);
 
   async function sesiBaru() {
     const sb = createClient();
     const { data } = await sb.from("chat_sessions").insert({ user_id: userId }).select().single();
-    if (data) {
-      setSessions([data, ...sessions]);
-      setCurrentSessionId(data.id);
-      setChat([]);
-    }
+    if (data) { setSessions([data, ...sessions]); setCurrentSessionId(data.id); setChat([]); }
   }
 
   async function kirim(e: React.FormEvent) {
     e.preventDefault();
     if (!msg.trim() || !userId || expired || !currentSessionId) return;
-    
+
     const userMsg = msg;
     setMsg("");
     setChat(prev => [...prev, { role: "user", content: userMsg }]);
-    setLoading(true);
+    setStatus("mengerjakan tugas...");
+
     const sb = createClient();
-    
-    await sb.from("chat_messages").insert({ 
-      user_id: userId, session_id: currentSessionId, role: "user", content: userMsg 
-    });
+    await sb.from("chat_messages").insert({ user_id: userId, session_id: currentSessionId, role: "user", content: userMsg });
 
     const currentSess = sessions.find(s => s.id === currentSessionId);
     if (currentSess && currentSess.title === "Percakapan Baru") {
@@ -113,104 +92,100 @@ export default function ChatRoom() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMsg, userId }),
+        body: JSON.stringify({ message: userMsg, userId, sessionId: currentSessionId }),
       });
       const data = await res.json();
-      setChat(prev => [...prev, { role: "ai", content: data.reply }]);
-      await sb.from("chat_messages").insert({ 
-        user_id: userId, session_id: currentSessionId, role: "ai", content: data.reply 
-      });
+
+      setStatus("menyusun jawaban...");
+      const fullText = data.reply;
+      let currentText = "";
+
+      for (let i = 0; i < fullText.length; i++) {
+        currentText += fullText[i];
+        setTypingText(currentText);
+        await new Promise(r => setTimeout(r, 8));
+      }
+
+      setStatus(null);
+      setChat(prev => [...prev, { role: "ai", content: fullText }]);
+      setTypingText("");
+      await sb.from("chat_messages").insert({ user_id: userId, session_id: currentSessionId, role: "ai", content: fullText });
     } catch (err) {
-      setChat(prev => [...prev, { role: "ai", content: "SYS.ERR: Connection failed." }]);
-    } finally {
-      setLoading(false);
+      setStatus(null);
+      setChat(prev => [...prev, { role: "ai", content: "Error: Gagal konek ke AI." }]);
     }
   }
 
-  return (
-    <main className="min-h-screen p-4 md:p-8 flex flex-col md:flex-row gap-6 bg-[#050508] text-[#00ffcc] font-mono selection:bg-[#ff00ff] selection:text-white overflow-hidden relative">
-      
-      {/* EFEK SCANLINE DI LAYAR */}
-      <div className="pointer-events-none fixed inset-0 z-50 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] opacity-30"></div>
+  function renderContent(text: string) {
+    const parts = text.split(/(```[\s\S]*?```)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith("```")) {
+        const lines = part.split("\n");
+        const code = lines.slice(1, -1).join("\n");
+        return (
+          <pre key={i} className="bg-black text-green-400 p-3 rounded text-xs overflow-x-auto font-mono my-2 border border-gray-700 whitespace-pre-wrap">
+            {code}
+          </pre>
+        );
+      }
+      return <span key={i} className="whitespace-pre-wrap">{part}</span>;
+    });
+  }
 
-      {/* SIDEBAR */}
-      <aside className="w-full md:w-72 bg-[#0a0a0f] border-r-2 border-[#ff00ff] shadow-[5px_0_20px_rgba(255,0,255,0.2)] p-4 flex flex-col h-fit md:h-[85vh] relative z-10">
-        <div className="mb-6">
-          <h2 className="text-xl font-black tracking-tighter uppercase text-white drop-shadow-[2px_2px_0_#ff00ff]">SYS.LOG</h2>
-          <p className="text-[10px] text-[#ff00ff] tracking-widest mt-1">&gt; MEMORY_FRAGMENTS</p>
-        </div>
-        <button onClick={sesiBaru} className="w-full mb-4 py-2 bg-[#00ffcc] text-black font-black uppercase text-xs tracking-[0.2em] hover:bg-[#ff00ff] hover:text-white transition-all skew-x-[-10deg]">
-          + New Connection
-        </button>
-        <div className="overflow-y-auto flex flex-col gap-1 pr-2 custom-scrollbar">
+  return (
+    <main className="min-h-screen p-6 md:p-10 flex flex-col md:flex-row gap-6">
+      <aside className="w-full md:w-64 paper-card p-4 flex flex-col h-fit max-h-[80vh] bg-[#FFFDF9]">
+        <button onClick={sesiBaru} className="paper-btn w-full mb-4 text-sm py-2">+ Percakapan Baru</button>
+        <div className="overflow-y-auto flex flex-col gap-2">
+          <p className="text-xs font-bold mb-1" style={{ color: "var(--color-muted)" }}>Riwayat Chat</p>
           {sessions.map((s) => (
-            <button 
-              key={s.id} 
-              onClick={() => setCurrentSessionId(s.id)}
-              className={`text-left p-2 text-xs truncate border-l-2 transition-all duration-200 ${currentSessionId === s.id ? "border-[#00ffcc] bg-[#00ffcc]/10 text-[#00ffcc] font-bold" : "border-gray-700 text-gray-500 hover:border-[#ff00ff] hover:text-[#ff00ff]"}`}
-            >
-              &gt; {s.title || "UNNAMED.SYS"}
+            <button key={s.id} onClick={() => setCurrentSessionId(s.id)}
+              className={`text-left p-2 rounded text-sm truncate ${currentSessionId === s.id ? "bg-[#5C4033] text-white" : "bg-gray-100 hover:bg-gray-200 text-black"}`}>
+              {s.title || "Percakapan Baru"}
             </button>
           ))}
         </div>
       </aside>
 
-      {/* RUANG CHAT UTAMA */}
-      <div className="flex-1 flex flex-col relative z-10 border border-gray-800 bg-[#08080c]/90 shadow-[0_0_30px_rgba(0,255,204,0.1)]">
-        
-        {/* HEADER */}
-        <div className="flex justify-between items-center p-4 border-b border-gray-800 bg-[#0a0a0f]">
-          <div>
-            <h1 className="text-2xl font-black uppercase tracking-[0.1em] text-white glitch-text" data-text="SIBERMAMRAC.AI">SIBERMAMRAC.AI</h1>
-            <p className="text-[10px] text-gray-500 tracking-widest mt-1">TERMINAL_SECURE // V.2.0</p>
-          </div>
-          <div className="flex gap-4 items-center">
-            <div className={`px-4 py-1 border-l-2 text-sm font-bold tracking-widest ${expired ? 'border-red-500 text-red-500 shadow-[0_0_15px_red] animate-pulse' : 'border-[#00ffcc] text-[#00ffcc]'}`}>
-              {expired ? '[ CONNECTION_LOST ]' : `[ T-MINUS: ${sisaWaktu} ]`}
+      <div className="flex-1 flex flex-col">
+        <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+          <h1 className="text-2xl font-bold" style={{ color: "var(--color-coffee)" }}>Ruang Chat AI</h1>
+          <div className="flex gap-2 items-center">
+            <div className={`px-3 py-1 rounded text-sm font-bold ${expired ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-800'}`}>
+              {expired ? '🔴 AI Dimatikan' : `⏳ Sisa: ${sisaWaktu}`}
             </div>
-            <Link href="/dashboard" className="text-black bg-white hover:bg-[#ff00ff] hover:text-white px-4 py-1 text-xs font-black uppercase tracking-widest transition-colors skew-x-[-10deg]">
-              BACK
-            </Link>
+            <Link href="/dashboard" className="paper-btn text-sm">Perpanjang</Link>
           </div>
         </div>
         
-        {expired && (
-          <div className="bg-red-950/50 border-b border-red-500 text-red-500 p-2 text-xs text-center tracking-[0.3em] font-bold">
-            FATAL_ERROR: SESSION EXPIRED
-          </div>
-        )}
+        {expired && <div className="bg-red-100 border border-red-400 text-red-700 p-3 rounded mb-3 text-sm"><b>Sesi Berakhir.</b> AI dimatikan otomatis. Silakan Perpanjang.</div>}
 
-        {/* AREA PESAN */}
-        <div className="flex-1 p-6 overflow-y-auto mb-2 flex flex-col gap-6" style={{ minHeight: "300px", maxHeight: "60vh" }}>
+        <div className="flex-1 paper-card p-4 overflow-y-auto mb-4 flex flex-col gap-3" style={{ minHeight: "300px", maxHeight: "60vh" }}>
           {chat.map((c, i) => (
-            <div key={i} className={`relative p-4 max-w-[80%] text-sm backdrop-blur-sm ${c.role === "user" ? "self-end bg-[#ff00ff]/5 border-r-2 border-[#ff00ff] text-white" : "self-start bg-[#00ffcc]/5 border-l-2 border-[#00ffcc] text-[#00ffcc]"}`}>
-              <span className={`absolute top-0 text-[9px] font-bold tracking-widest -translate-y-1/2 px-1 bg-[#08080c] ${c.role === "user" ? "-right-2 text-[#ff00ff]" : "-left-2 text-[#00ffcc]"}`}>
-                {c.role === "user" ? "// USER" : "// AI_CORE"}
-              </span>
-              {c.content}
+            <div key={i} className={`p-3 rounded max-w-[85%] text-sm ${c.role === "user" ? "bg-[#5C4033] text-white self-end" : "bg-[#F5F0E8] self-start border border-gray-300"}`}>
+              {renderContent(c.content)}
             </div>
           ))}
-          {loading && <div className="text-xs text-[#ff00ff] animate-pulse tracking-widest">&gt;&gt;&gt; PROCESSING DATA...</div>}
+
+          {status && (
+            <div className="p-2 text-xs self-start border-l-2 border-[#6B8E23] bg-[#6B8E23]/10 animate-pulse text-[#5a7a1d] font-semibold">
+              &gt; {status}
+            </div>
+          )}
+
+          {typingText && (
+            <div className="p-3 rounded max-w-[85%] self-start border border-gray-300 bg-[#F5F0E8] text-sm">
+              {renderContent(typingText)}
+              <span className="animate-pulse">_</span>
+            </div>
+          )}
+
           <div ref={bottomRef} />
         </div>
 
-        {/* INPUT AREA */}
-        <form onSubmit={kirim} className="p-4 bg-[#0a0a0f] border-t border-gray-800 flex items-center gap-2">
-          <span className="text-[#ff00ff] text-xl font-black">&gt;</span>
-          <input 
-            className="flex-1 bg-transparent text-[#00ffcc] outline-none placeholder-gray-700 text-sm tracking-wide" 
-            value={msg} 
-            onChange={e => setMsg(e.target.value)} 
-            placeholder={expired ? "SYSTEM_OFFLINE..." : "TYPE YOUR COMMAND HERE..."} 
-            disabled={loading || expired || !userId} 
-          />
-          <button 
-            className="px-6 py-2 bg-[#00ffcc]/10 border border-[#00ffcc] text-[#00ffcc] font-bold uppercase text-xs tracking-widest hover:bg-[#00ffcc] hover:text-black hover:shadow-[0_0_15px_#00ffcc] transition-all disabled:opacity-30 disabled:hover:bg-[#00ffcc]/10 disabled:hover:text-[#00ffcc] disabled:hover:shadow-none skew-x-[-10deg]" 
-            type="submit" 
-            disabled={loading || expired || !userId}
-          >
-            EXEC
-          </button>
+        <form onSubmit={kirim} className="flex gap-2">
+          <input className="paper-input flex-1" value={msg} onChange={e => setMsg(e.target.value)} placeholder={expired ? "AI sudah dimatikan..." : "Tanya apa aja..."} disabled={!!status || expired || !userId} />
+          <button className="paper-btn" type="submit" disabled={!!status || expired || !userId}>Kirim</button>
         </form>
       </div>
     </main>
