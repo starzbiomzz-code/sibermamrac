@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import DashboardClient from "./client";
 
 const TOKO = [
   { slug: "prompt-ai",  nama: "Toko Prompt AI",      emoji: "🤖" },
@@ -19,30 +20,26 @@ async function DashboardContent() {
   
   if (!user) redirect("/login");
 
-  const { data: profile } = await sb.from("profiles").select("saldo").eq("id", user.id).single();
+  // Pake maybeSingle() biar kalo profil belum kebikin, ga langsung crash
+  const { data: profile } = await sb.from("profiles").select("saldo, role").eq("id", user.id).maybeSingle();
   const saldo = profile?.saldo ?? 0;
+  const role = profile?.role ?? "user";
+
+  const { data: sub } = await sb.from("subscriptions")
+    .select("expired_at, agent_type").eq("user_id", user.id).eq("status", "active")
+    .gte("expired_at", new Date().toISOString())
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+
+  let sisaWaktu = null;
+  if (sub) {
+    const diff = new Date(sub.expired_at).getTime() - new Date().getTime();
+    sisaWaktu = Math.floor(diff / (1000 * 60));
+  }
 
   return (
     <main className="min-h-screen p-6 md:p-10">
-      <header className="flex items-center justify-between mb-8 flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold" style={{ color: "var(--color-coffee)" }}>
-            Dashboard
-          </h1>
-          <p className="text-sm" style={{ color: "var(--color-muted)" }}>{user.email}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="paper-card px-4 py-2">
-            <span className="text-sm" style={{ color: "var(--color-muted)" }}>Saldo: </span>
-            <span className="paper-credit">{saldo.toLocaleString()} Credit 💳</span>
-          </div>
-          {/* Tombol ke Halaman Status */}
-          <Link href="/status" className="paper-card px-4 py-2 text-sm">Riwayat Deposit</Link>
-          <Link href="/topup" className="paper-btn">Isi Saldo</Link>
-        </div>
-      </header>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <DashboardClient saldo={saldo} user={user} sisaWaktu={sisaWaktu} agent={sub?.agent_type || null} role={role} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-8">
         {TOKO.map((t) => (
           <Link key={t.slug} href={`/toko/${t.slug}`} className="paper-card p-6 block">
             <div className="text-4xl">{t.emoji}</div>
